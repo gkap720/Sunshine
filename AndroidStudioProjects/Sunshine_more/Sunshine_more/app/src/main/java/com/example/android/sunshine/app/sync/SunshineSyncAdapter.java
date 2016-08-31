@@ -17,6 +17,7 @@ import android.content.SyncRequest;
 import android.content.SyncResult;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -350,17 +351,19 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
                             locationQuery, System.currentTimeMillis());
                     Cursor mCursor = getContext().getContentResolver().query(weatherUri,
                             NOTIFY_WEATHER_PROJECTION, null, null, null);
+                    DatabaseUtils.dumpCursor(mCursor);
                     if (mCursor.moveToFirst()) {
                         int mWeatherId = mCursor.getInt(INDEX_WEATHER_ID);
                         double mHigh = mCursor.getDouble(INDEX_MAX_TEMP);
                         double mLow = mCursor.getDouble(INDEX_MIN_TEMP);
                         mCursor.close();
                         if (mWeatherId != weatherId || mHigh != high || mLow != low) {
+                            String highOut = Utility.formatTemperature(getContext(), mHigh);
+                            String lowOut = Utility.formatTemperature(getContext(), mLow);
                             PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather");
                             putDataMapRequest.getDataMap().putInt("weatherId", mWeatherId);
-                            putDataMapRequest.getDataMap().putDouble("high", mHigh);
-                            putDataMapRequest.getDataMap().putDouble("low", mLow);
-                            putDataMapRequest.getDataMap().putLong("change", System.currentTimeMillis());
+                            putDataMapRequest.getDataMap().putString("high", highOut);
+                            putDataMapRequest.getDataMap().putString("low", lowOut);
                             PutDataRequest request = putDataMapRequest.asPutDataRequest();
                             request.setUrgent();
                             Wearable.DataApi.putDataItem(mGoogleApiClient, request)
@@ -372,6 +375,26 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
                                     });
                         }
                     }
+                    //if cursor is null that means we have entered a new location not yet in
+                    // database so simply send data that's about to be added!
+                    else if (mCursor == null || mCursor.getCount() == 0) {
+                        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather");
+                        String highOut = Utility.formatTemperature(getContext(), high);
+                        String lowOut = Utility.formatTemperature(getContext(), low);
+                        putDataMapRequest.getDataMap().putInt("weatherId", weatherId);
+                        putDataMapRequest.getDataMap().putString("high", highOut);
+                        putDataMapRequest.getDataMap().putString("low", lowOut);
+                        PutDataRequest request = putDataMapRequest.asPutDataRequest();
+                        request.setUrgent();
+                        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
+                                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+                                    @Override
+                                    public void onResult(DataApi.DataItemResult dataItemResult) {
+
+                                    }
+                                });
+                    }
+                    mCursor.close();
                 }
                 weatherValues.put(WeatherContract.WeatherEntry.COLUMN_LOC_KEY, locationId);
                 weatherValues.put(WeatherContract.WeatherEntry.COLUMN_DATE, dateTime);

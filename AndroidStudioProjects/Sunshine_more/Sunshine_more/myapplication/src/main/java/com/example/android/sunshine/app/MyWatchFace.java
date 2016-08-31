@@ -121,8 +121,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
         };
         float mXOffset;
         float mYOffset;
-        double mLow;
-        double mHigh;
+        String mLow = "0";
+        String mHigh = "0";
         int mWeatherId;
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -267,10 +267,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
             }
             float mLineOffset = getResources().getDimension(R.dimen.line_height);
-            String highOut = String.format(getResources().getString(R.string.format_temperature),
-                    (float) mHigh);
-            String lowOut = String.format(getResources().getString(R.string.format_temperature),
-                    (float) mLow);
             if (mWeatherId == 0) {
                 mWeatherId = 800;
             }
@@ -291,8 +287,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
             if (!mAmbient) {
                 canvas.drawBitmap(weather, mXOffset, mYOffset + mLineOffset + 10, mTextPaint);
                 mLightPaint.setTextSize(getResources().getDimension(R.dimen.medium_text_size));
-                canvas.drawText(highOut, mXOffset + 80, mYOffset + 3 * mLineOffset, mLightPaint);
-                canvas.drawText(lowOut, mXOffset + 85 + mLightPaint.measureText(highOut),
+                canvas.drawText(mHigh, mXOffset + 80, mYOffset + 3 * mLineOffset, mLightPaint);
+                canvas.drawText(mLow, mXOffset + 85 + mLightPaint.measureText(mHigh),
                         mYOffset + 3 * mLineOffset, mLightPaint);
             }
 
@@ -332,7 +328,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-
+            Wearable.DataApi.addListener(mGoogleApiClient, this);
         }
 
         @Override
@@ -353,8 +349,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem()).getDataMap();
                     String path = dataEvent.getDataItem().getUri().getPath();
                     if (path.equals(("/weather"))) {
-                        mHigh = dataMap.getDouble("high");
-                        mLow = dataMap.getDouble("low");
+                        mHigh = dataMap.getString("high");
+                        mLow = dataMap.getString("low");
                         mWeatherId = dataMap.getInt("weatherId");
                     }
                 }
